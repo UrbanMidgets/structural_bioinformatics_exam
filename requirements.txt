@@ -1,0 +1,16 @@
+pandas
+matplotlib      # For visualizing structural data
+numpy           # Required by Biopython and general computations
+
+biopython       # For PDB parsing and structural analysis
+nglview         # For interactive visualization of proteins
+
+
+scipy           # For structural computations if needed
+jupyterlab      # To work with NGLView in Jupyter notebooks
+
+# Optional packages
+# mdtraj         # For analyzing molecular dynamics trajectories
+# prody          # For protein dynamics and structural analysis
+# pymol-open-source  # For advanced molecular visualization
+# py3Dmol        # For alternative web-based molecular visualization
