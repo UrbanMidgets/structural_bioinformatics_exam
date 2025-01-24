@@ -1,6 +1,3 @@
-# structural_bioinformatics_exam
-Repository containing all code related to exam project in structural bioinformatics (UCPH). Course code: NBIA05014U.
-
 # Structural Bioinformatics Exam Project
 
 This repository contains all the code related to the Structural Bioinformatics exam project at the University of Copenhagen (UCPH), course code: NBIA05014U.
