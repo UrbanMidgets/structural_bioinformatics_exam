@@ -1,16 +1,36 @@
 import numpy as np
+import pandas as pd
 
 def is_complementary(a, b):
-    """Check for base-pairing. Returns boolean."""
+    """
+    Check if two RNA bases can form a complementary pair.
+    Args:
+        a (str): First RNA base.
+        b (str): Second RNA base.
+    Returns:
+        bool: True if the bases are complementary, False otherwise.
+    """
     valid = {"AU", "UA", "CG", "GC", "GU", "UG"}
     return f"{a}{b}" in valid
 
 def initialize_matrix(seq_length):
-    """Initialize the dynamic programming matrix."""
+    """
+    Initialize a dynamic programming matrix for RNA folding.
+    Args:
+        seq_length (int): Length of the RNA sequence.
+    Returns:
+        np.ndarray: A 2D matrix initialized to zeros.
+    """
     return np.zeros((seq_length, seq_length), dtype=int)
 
 def fill_matrix(seq):
-    """Fill the Nussinov matrix without constraints."""
+    """
+    Fill the Nussinov dynamic programming matrix for RNA secondary structure prediction.
+    Args:
+        seq (str): RNA sequence.
+    Returns:
+        np.ndarray: Filled Nussinov matrix.
+    """
     l = len(seq)
     matrix = initialize_matrix(l)
 
@@ -39,7 +59,14 @@ def fill_matrix(seq):
     return matrix
 
 def traceback(matrix, seq):
-    """Trace back through the matrix to generate the structure without constraints."""
+    """
+    Generate RNA secondary structure from the Nussinov matrix.
+    Args:
+        matrix (np.ndarray): Nussinov matrix.
+        seq (str): RNA sequence.
+    Returns:
+        str: Dot-bracket notation of the predicted secondary structure.
+    """
     structure = ["."] * len(seq)
     stack = [(0, len(seq) - 1)]
 
@@ -66,7 +93,14 @@ def traceback(matrix, seq):
     return "".join(structure)
 
 def fill_matrix_with_constraints(seq, constraints):
-    """Fill the Nussinov matrix with pseudoknot constraints."""
+    """
+    Fill the Nussinov matrix while considering pseudoknot constraints.
+    Args:
+        seq (str): RNA sequence.
+        constraints (set): Set of index pairs representing forbidden base pairs.
+    Returns:
+        np.ndarray: Filled Nussinov matrix with constraints applied.
+    """
     l = len(seq)
     matrix = initialize_matrix(l)
 
@@ -95,7 +129,15 @@ def fill_matrix_with_constraints(seq, constraints):
     return matrix
 
 def traceback_with_constraints(matrix, seq, constraints):
-    """Trace back through the matrix to generate the structure with pseudoknots."""
+    """
+    Generate RNA secondary structure from the Nussinov matrix with constraints.
+    Args:
+        matrix (np.ndarray): Nussinov matrix.
+        seq (str): RNA sequence.
+        constraints (set): Set of index pairs representing forbidden base pairs.
+    Returns:
+        str: Dot-bracket notation of the predicted secondary structure with constraints applied.
+    """
     structure = ["."] * len(seq)
     stack = [(0, len(seq) - 1)]
 
@@ -123,14 +165,11 @@ def traceback_with_constraints(matrix, seq, constraints):
 
 def parse_sequences_and_constraints(file_path):
     """
-    Parse RNA sequences and their pseudoknot constraints from a sequences file.
-
+    Parse RNA sequences and pseudoknot constraints from a file.
     Args:
-        file_path (str): Path to the sequences file.
-
+        file_path (str): Path to the input file.
     Returns:
-        List of tuples: Each tuple contains (sequence, constraints) where constraints
-                        is a set of index pairs for pseudoknots.
+        list: List of tuples containing sequences and constraints.
     """
     sequences = []
     constraints_list = []
@@ -161,12 +200,56 @@ def parse_sequences_and_constraints(file_path):
 
     return list(zip(sequences, constraints_list))
 
+def calculate_hamming_distance(struct1, struct2):
+    """
+    Calculate the Hamming distance between two RNA structures.
+    Args:
+        struct1 (str): First dot-bracket notation.
+        struct2 (str): Second dot-bracket notation.
+    Returns:
+        int: Hamming distance between the two structures.
+    """
+    return sum(1 for a, b in zip(struct1, struct2) if a != b)
+
+def calculate_base_pair_distance(struct1, struct2):
+    """
+    Calculate the base pair distance between two RNA structures.
+    Args:
+        struct1 (str): First dot-bracket notation.
+        struct2 (str): Second dot-bracket notation.
+    Returns:
+        int: Base pair distance between the two structures.
+    """
+    def get_base_pairs(struct):
+        stack = []
+        pairs = set()
+        for i, char in enumerate(struct):
+            if char in "([{":
+                stack.append(i)
+            elif char in ")]}":
+                if stack:
+                    start = stack.pop()
+                    pairs.add((start, i))
+        return pairs
+
+    pairs1 = get_base_pairs(struct1)
+    pairs2 = get_base_pairs(struct2)
+
+    # Symmetric difference of the base pairs sets
+    return len(pairs1.symmetric_difference(pairs2))
+
 def process_sequences_with_models(file_path):
-    """Process all sequences, folding with both unconstrained and constrained models."""
+    """
+    Process RNA sequences, predicting structures with and without constraints.
+    Args:
+        file_path (str): Path to the input file.
+    Returns:
+        list: List of dictionaries containing results for each sequence.
+    """
     parsed_data = parse_sequences_and_constraints(file_path)
     results = []
 
-    for seq, constraints in parsed_data:
+    for idx, (seq, constraints) in enumerate(parsed_data, start=1):
         # Unconstrained folding
         matrix_unconstrained = fill_matrix(seq)
         structure_unconstrained = traceback(matrix_unconstrained, seq)
@@ -175,15 +258,33 @@ def process_sequences_with_models(file_path):
         matrix_constrained = fill_matrix_with_constraints(seq, constraints)
         structure_constrained = traceback_with_constraints(matrix_constrained, seq, constraints)
 
-        results.append((seq, structure_unconstrained, structure_constrained))
+        # Calculate metrics
+        hamming_dist = calculate_hamming_distance(structure_unconstrained, structure_constrained)
+        base_pair_dist = calculate_base_pair_distance(structure_unconstrained, structure_constrained)
+
+        # Collect results
+        results.append({
+            "sequence": seq,
+            "constraints": constraints,
+            "unconstrained": structure_unconstrained,
+            "constrained": structure_constrained,
+            "hamming": hamming_dist,
+            "base_pair": base_pair_dist
+        })
+
+        # Print consolidated output
+        print(f"Sequence {idx}: {seq}\nConstraints: {constraints}\nUnconstrained: {structure_unconstrained}\nConstrained: {structure_constrained}\nHamming Distance: {hamming_dist}\nBase Pair Distance: {base_pair_dist}\n")
+
+    # Save results to a DataFrame for easier analysis
+    df = pd.DataFrame(results)
+    df.to_csv("rna_results.csv", index=False)
+    print("Results saved to rna_results.csv")
 
     return results
 
-# File path to the sequences file
-file_path = "./wbn215_sequences.txt"
+if __name__ == "__main__":
+    # File path to the sequences file
+    file_path = "./wbn215_sequences.txt"
 
-# Process sequences
-folded_structures = process_sequences_with_models(file_path)
-
-for seq, unconstrained, constrained in folded_structures:
-    print(f"Sequence: {seq}\nUnconstrained: {unconstrained}\nConstrained: {constrained}\n")
+    # Process sequences
+    folded_structures = process_sequences_with_models(file_path)
