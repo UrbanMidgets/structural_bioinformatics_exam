@@ -10,6 +10,7 @@ scipy           # For structural computations if needed
 jupyterlab      # To work with NGLView in Jupyter notebooks
 
 # Optional packages
+MDAnalysis      # For analyzing molecular dynamics trajectories
 # mdtraj         # For analyzing molecular dynamics trajectories
 # prody          # For protein dynamics and structural analysis
 # pymol-open-source  # For advanced molecular visualization
