@@ -1,3 +1,5 @@
+########### OUTDATED VERSION OF PROTEIN.PY, DO NOT USE!! ###########
+
 from Bio.PDB import PDBList, PDBParser, NeighborSearch, PPBuilder
 from Bio.PDB.DSSP import DSSP
 import os
